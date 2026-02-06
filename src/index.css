@@ -1,0 +1,200 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Terminal Colors */
+  --bg-primary: #0a0a0a;
+  --bg-secondary: #1a1a1a;
+  --bg-tertiary: #2a2a2a;
+
+  --border-primary: #00ff41;
+  --border-secondary: #00cc33;
+  --border-muted: #333333;
+
+  --text-primary: #00ff41;
+  --text-secondary: #00cc33;
+  --text-muted: #666666;
+  --text-white: #e0e0e0;
+
+  --color-success: #00ff41;
+  --color-danger: #ff0055;
+  --color-warning: #ffaa00;
+  --color-info: #00ddff;
+
+  /* Spacing */
+  --spacing-xs: 0.5rem;
+  --spacing-sm: 1rem;
+  --spacing-md: 1.5rem;
+  --spacing-lg: 2rem;
+
+  /* No rounded corners - terminal aesthetic */
+  --radius: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--bg-primary);
+  color: var(--text-white);
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Terminal-style panels */
+.glass-panel {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-muted);
+  border-radius: var(--radius);
+  box-shadow: none;
+  transition: border-color 0.2s;
+}
+
+.glass-panel:hover {
+  border-color: var(--border-primary);
+}
+
+/* Terminal buttons */
+.glass-button {
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-primary);
+  color: var(--text-primary);
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: 'JetBrains Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.85rem;
+}
+
+.glass-button:hover {
+  background: var(--border-primary);
+  color: var(--bg-primary);
+  box-shadow: 0 0 10px var(--border-primary);
+}
+
+.glass-button:active {
+  transform: translateY(1px);
+}
+
+/* Terminal inputs */
+.glass-input {
+  background: var(--bg-primary);
+  border: 2px solid var(--border-muted);
+  color: var(--text-white);
+  padding: 0.75rem;
+  border-radius: var(--radius);
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
+  font-size: 0.95rem;
+  font-family: 'JetBrains Mono', monospace;
+  transition: border-color 0.2s;
+}
+
+.glass-input:focus {
+  border-color: var(--border-primary);
+  box-shadow: 0 0 5px var(--border-primary);
+}
+
+.glass-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Select styling */
+select.glass-input {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2300ff41' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  padding-right: 2.5rem;
+}
+
+/* Layout */
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: var(--spacing-md);
+}
+
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Terminal prompt effect */
+.terminal-prompt::before {
+  content: '$ ';
+  color: var(--text-primary);
+  font-weight: bold;
+}
+
+/* Blink cursor animation */
+@keyframes blink {
+
+  0%,
+  50% {
+    opacity: 1;
+  }
+
+  51%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.cursor-blink::after {
+  content: '▊';
+  color: var(--text-primary);
+  animation: blink 1s infinite;
+  margin-left: 2px;
+}
+
+/* Scanline effect (subtle) */
+@keyframes scanline {
+  0% {
+    transform: translateY(-100%);
+  }
+
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(to bottom, transparent, var(--border-primary), transparent);
+  opacity: 0.1;
+  animation: scanline 8s linear infinite;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Remove old gradient text */
+.text-gradient {
+  background: none;
+  -webkit-background-clip: unset;
+  -webkit-text-fill-color: unset;
+  color: var(--text-primary);
+}
