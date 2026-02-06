@@ -23,7 +23,46 @@ export interface RatesResponse {
   rates: Record<string, number>;
 }
 
-export const SUPPORTED_CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'INR', 'SGD'];
+export const SUPPORTED_CURRENCIES = [
+  'USD', // US Dollar
+  'EUR', // Euro
+  'CNY', // Chinese Yuan
+  'JPY', // Japanese Yen
+  'KRW', // South Korean Won
+  'SGD', // Singapore Dollar
+  'HKD', // Hong Kong Dollar
+  'TWD', // Taiwan Dollar
+  'THB', // Thai Baht
+  'MYR', // Malaysian Ringgit
+  'IDR', // Indonesian Rupiah
+  'PHP', // Philippine Peso
+  'VND', // Vietnamese Dong
+  'INR', // Indian Rupee
+  'GBP', // British Pound
+  'AUD', // Australian Dollar
+  'CAD', // Canadian Dollar
+];
+
+export const CURRENCY_NAMES: Record<string, string> = {
+  'USD': 'US Dollar',
+  'EUR': 'Euro',
+  'CNY': 'Chinese Yuan',
+  'JPY': 'Japanese Yen',
+  'KRW': 'South Korean Won',
+  'SGD': 'Singapore Dollar',
+  'HKD': 'Hong Kong Dollar',
+  'TWD': 'Taiwan Dollar',
+  'THB': 'Thai Baht',
+  'MYR': 'Malaysian Ringgit',
+  'IDR': 'Indonesian Rupiah',
+  'PHP': 'Philippine Peso',
+  'VND': 'Vietnamese Dong',
+  'INR': 'Indian Rupee',
+  'GBP': 'British Pound',
+  'AUD': 'Australian Dollar',
+  'CAD': 'Canadian Dollar',
+};
+
 
 export type ExpenseSummary = {
   totalSpent: number;      // Actual consumption (sum of myShare)

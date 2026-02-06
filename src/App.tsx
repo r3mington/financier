@@ -1,15 +1,18 @@
 import { useState } from 'react';
 import type { Expense } from './types';
+import { CURRENCY_NAMES } from './types';
 import { useExpenses } from './hooks/useExpenses';
 import { useCurrency } from './hooks/useCurrency';
 import { ExpenseForm } from './components/ExpenseForm';
 import { AsciiBarChart } from './components/AsciiBarChart';
+import { TimePeriodStats } from './components/TimePeriodStats';
 import { format } from 'date-fns';
-import { Edit2, Trash2, Terminal } from 'lucide-react';
+import { Edit2, Trash2, Terminal, Download } from 'lucide-react';
+import { exportToCSV } from './utils/exportCSV';
 
 function App() {
   const { expenses, addExpense, deleteExpense, updateExpense, summary } = useExpenses();
-  const { baseCurrency, setBaseCurrency, supportedCurrencies } = useCurrency();
+  const { supportedCurrencies, baseCurrency, setBaseCurrency, convert } = useCurrency();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | undefined>(undefined);
@@ -45,7 +48,9 @@ function App() {
               className="glass-input"
               style={{ width: 'auto', padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
             >
-              {supportedCurrencies.map(c => <option key={c} value={c}>{c}</option>)}
+              {supportedCurrencies.map(c => (
+                <option key={c} value={c}>{c} - {CURRENCY_NAMES[c]}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -61,7 +66,10 @@ function App() {
           <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '0.75rem', letterSpacing: '0.1em' }}>
             [TOTAL_CONSUMPTION]
           </div>
-          <div style={{ fontSize: '2.5rem', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'JetBrains Mono' }}>
+          <div
+            className="animate-pulseGlow"
+            style={{ fontSize: '2.5rem', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'JetBrains Mono' }}
+          >
             {baseCurrency} {summary.totalSpent.toFixed(2)}
           </div>
         </div>
@@ -82,6 +90,9 @@ function App() {
           </div>
         </div>
       </section>
+
+      {/* Time Period Stats */}
+      <TimePeriodStats />
 
       {/* ASCII Chart */}
       <AsciiBarChart />
@@ -109,11 +120,33 @@ function App() {
           padding: '1rem',
           borderBottom: '2px solid var(--border-muted)',
           background: 'var(--bg-tertiary)',
-          color: 'var(--text-primary)',
-          fontSize: '0.85rem',
-          letterSpacing: '0.05em'
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
         }}>
-          [TRANSACTION_LOG] ({expenses.length} entries)
+          <div style={{
+            color: 'var(--text-primary)',
+            fontSize: '0.85rem',
+            letterSpacing: '0.05em'
+          }}>
+            [TRANSACTION_LOG] ({expenses.length} entries)
+          </div>
+          {expenses.length > 0 && (
+            <button
+              onClick={() => exportToCSV(expenses, baseCurrency)}
+              className="glass-button"
+              style={{
+                padding: '0.5rem 1rem',
+                fontSize: '0.7rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              <Download size={14} />
+              [EXPORT_CSV]
+            </button>
+          )}
         </div>
 
         {expenses.length === 0 ? (
@@ -133,7 +166,9 @@ function App() {
                   display: 'grid',
                   gridTemplateColumns: '1fr auto',
                   gap: '1rem',
-                  alignItems: 'center'
+                  alignItems: 'center',
+                  animation: `fadeInUp 0.3s ease-out ${idx * 0.05}s forwards`,
+                  opacity: 0
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-tertiary)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
@@ -152,6 +187,11 @@ function App() {
                   </div>
                   <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
                     TOTAL: {expense.currency || baseCurrency} {expense.totalAmount.toFixed(2)}
+                    {expense.currency && expense.currency !== 'USD' && (
+                      <span style={{ marginLeft: '0.5rem', color: 'var(--text-primary)' }}>
+                        ≈ USD {convert(expense.totalAmount, expense.currency).toFixed(2)}
+                      </span>
+                    )}
                   </div>
                 </div>
 

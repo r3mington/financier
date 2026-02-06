@@ -44,18 +44,51 @@ export function AsciiBarChart() {
 
     return (
         <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '2rem' }}>
-            <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '1rem', letterSpacing: '0.1em' }}>
+            <div style={{
+                color: 'var(--text-muted)',
+                fontSize: '0.75rem',
+                marginBottom: '1rem',
+                letterSpacing: '0.1em',
+                animation: 'subtlePulse 4s ease-in-out infinite'
+            }}>
                 [SPEND_ANALYSIS_BY_CATEGORY]
             </div>
 
             <div style={{ fontFamily: 'JetBrains Mono', fontSize: '0.8rem' }}>
-                {sortedCategories.map(([cat, val]) => (
-                    <div key={cat} style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                {sortedCategories.map(([cat, val], idx) => (
+                    <div
+                        key={cat}
+                        style={{
+                            marginBottom: '0.5rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '1rem',
+                            animation: `fadeInUp 0.4s ease-out ${idx * 0.1}s forwards`,
+                            opacity: 0
+                        }}
+                    >
                         <div style={{ width: '80px', color: 'var(--text-white)' }}>{cat.toUpperCase()}</div>
-                        <div style={{ color: 'var(--text-primary)' }}>
-                            {renderBar(val, maxTotal)}
+                        <div
+                            style={{
+                                color: 'var(--text-primary)',
+                                overflow: 'hidden',
+                                position: 'relative'
+                            }}
+                        >
+                            <div style={{
+                                animation: `barGrow 0.8s ease-out ${idx * 0.1 + 0.2}s forwards`,
+                                width: 0,
+                                overflow: 'hidden',
+                                whiteSpace: 'nowrap'
+                            }}>
+                                {renderBar(val, maxTotal)}
+                            </div>
                         </div>
-                        <div style={{ color: 'var(--text-muted)' }}>
+                        <div style={{
+                            color: 'var(--text-muted)',
+                            animation: `fadeInUp 0.4s ease-out ${idx * 0.1 + 0.4}s forwards`,
+                            opacity: 0
+                        }}>
                             {baseCurrency} {val.toFixed(0)}
                         </div>
                     </div>

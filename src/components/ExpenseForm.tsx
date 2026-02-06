@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { Expense } from '../types';
-import { CATEGORIES } from '../types';
+import { CATEGORIES, CURRENCY_NAMES } from '../types';
 import { useCurrency } from '../hooks/useCurrency';
 import { v4 as uuidv4 } from 'uuid';
 import { X, Trash2 } from 'lucide-react';
@@ -184,7 +184,7 @@ export function ExpenseForm({ initialData, onSave, onCancel, onDelete }: Expense
                                 style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}
                             >
                                 {supportedCurrencies.map(c => (
-                                    <option key={c} value={c}>{c}</option>
+                                    <option key={c} value={c}>{c} - {CURRENCY_NAMES[c]}</option>
                                 ))}
                             </select>
                         </div>

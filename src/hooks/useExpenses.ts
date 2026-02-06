@@ -59,11 +59,48 @@ export function useExpenses() {
 
     summary.netBalance = summary.totalOwedToMe - summary.totalIOwe;
 
+    // Time Period Statistics
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // Last month (previous calendar month)
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+
+    // Last quarter (previous 3 months)
+    const lastQuarterStart = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+    const lastQuarterEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+
+    const calculatePeriodSpend = (startDate: Date, endDate?: Date) => {
+        return expenses.reduce((total, exp) => {
+            const expDate = new Date(exp.date);
+            const isInRange = endDate
+                ? expDate >= startDate && expDate <= endDate
+                : expDate >= startDate;
+
+            if (isInRange) {
+                const currency = exp.currency || baseCurrency;
+                return total + convert(exp.myShare, currency);
+            }
+            return total;
+        }, 0);
+    };
+
+    const rolling7Days = calculatePeriodSpend(sevenDaysAgo);
+    const lastMonth = calculatePeriodSpend(lastMonthStart, lastMonthEnd);
+    const lastQuarter = calculatePeriodSpend(lastQuarterStart, lastQuarterEnd);
+
+
     return {
         expenses,
         addExpense,
         updateExpense,
         deleteExpense,
-        summary
+        summary,
+        timePeriods: {
+            rolling7Days,
+            lastMonth,
+            lastQuarter
+        }
     };
 }
