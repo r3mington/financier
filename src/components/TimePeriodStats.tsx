@@ -25,10 +25,12 @@ export function TimePeriodStats() {
 
             <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(4, 1fr)',
+                gridTemplateColumns: 'repeat(2, 1fr)',
                 gap: '1rem',
                 fontFamily: 'JetBrains Mono'
-            }}>
+            }}
+                className="time-stats-grid"
+            >
                 {stats.map((stat, idx) => (
                     <div
                         key={stat.label}

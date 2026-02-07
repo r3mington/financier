@@ -14,6 +14,16 @@ export interface Expense {
 
   // Optional notes
   notes?: string;
+
+  // Location
+  location?: {
+    lat: number;
+    lng: number;
+    address?: string; // Optional reverse geocoded address
+    city?: string;
+    country?: string;
+    countryCode?: string; // ISO code for flag etc.
+  };
 }
 
 export interface RatesResponse {

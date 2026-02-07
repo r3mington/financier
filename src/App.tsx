@@ -7,15 +7,37 @@ import { ExpenseForm } from './components/ExpenseForm';
 import { AsciiBarChart } from './components/AsciiBarChart';
 import { TimePeriodStats } from './components/TimePeriodStats';
 import { format } from 'date-fns';
-import { Edit2, Trash2, Terminal, Download } from 'lucide-react';
+import { Edit2, Trash2, Terminal, Download, LogOut } from 'lucide-react';
 import { exportToCSV } from './utils/exportCSV';
+import { AuthProvider, useAuth } from './context/AuthProvider';
+import { AuthForm } from './components/AuthForm';
 
-function App() {
+function AppContent() {
+  const { user, loading, signOut } = useAuth();
   const { expenses, addExpense, deleteExpense, updateExpense, summary } = useExpenses();
   const { supportedCurrencies, baseCurrency, setBaseCurrency, convert } = useCurrency();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | undefined>(undefined);
+
+  if (loading) {
+    return (
+      <div style={{
+        height: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'var(--text-primary)',
+        fontFamily: 'JetBrains Mono'
+      }}>
+        [INITIALIZING_SYSTEM...]
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthForm />;
+  }
 
   const handleEdit = (expense: Expense) => {
     setEditingExpense(expense);
@@ -39,23 +61,35 @@ function App() {
             </h1>
           </div>
 
-          {/* Currency selector */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>BASE:</span>
-            <select
-              value={baseCurrency}
-              onChange={e => setBaseCurrency(e.target.value)}
-              className="glass-input"
-              style={{ width: 'auto', padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+          {/* Right Header Controls */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            {/* Currency selector */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>BASE:</span>
+              <select
+                value={baseCurrency}
+                onChange={e => setBaseCurrency(e.target.value)}
+                className="glass-input"
+                style={{ width: 'auto', padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+              >
+                {supportedCurrencies.map(c => (
+                  <option key={c} value={c}>{c} - {CURRENCY_NAMES[c]}</option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              onClick={signOut}
+              className="glass-button"
+              style={{ padding: '0.4rem', border: '1px solid var(--border-muted)' }}
+              title="Sign Out"
             >
-              {supportedCurrencies.map(c => (
-                <option key={c} value={c}>{c} - {CURRENCY_NAMES[c]}</option>
-              ))}
-            </select>
+              <LogOut size={14} />
+            </button>
           </div>
         </div>
         <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontFamily: 'monospace' }}>
-          <span className="terminal-prompt">expense-tracker --mode=realtime</span>
+          <span className="terminal-prompt">expense-tracker --mode=realtime --user={user.email}</span>
         </div>
       </header>
 
@@ -91,13 +125,7 @@ function App() {
         </div>
       </section>
 
-      {/* Time Period Stats */}
-      <TimePeriodStats />
-
-      {/* ASCII Chart */}
-      <AsciiBarChart />
-
-      {/* Add button */}
+      {/* Add button - moved to top for mobile UX */}
       <button
         className="glass-button"
         onClick={() => {
@@ -113,6 +141,12 @@ function App() {
       >
         [+] NEW_TRANSACTION
       </button>
+
+      {/* Time Period Stats */}
+      <TimePeriodStats />
+
+      {/* ASCII Chart */}
+      <AsciiBarChart />
 
       {/* Transaction Log */}
       <div className="glass-panel" style={{ overflow: 'hidden' }}>
@@ -184,14 +218,24 @@ function App() {
                   </div>
                   <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
                     {format(new Date(expense.date), 'yyyy-MM-dd')} | {expense.category} | {expense.paidBy === 'me' ? 'PAID_BY_USER' : 'PAID_BY_OTHER'}
+                    {expense.location && (
+                      <span style={{ color: 'var(--text-primary)', marginLeft: '0.5rem' }}>
+                        | {expense.location.city ? `${expense.location.city.toUpperCase()}, ${expense.location.countryCode}` : `GPS: ${expense.location.lat.toFixed(4)}, ${expense.location.lng.toFixed(4)}`}
+                      </span>
+                    )}
                   </div>
                   <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
                     TOTAL: {expense.currency || baseCurrency} {expense.totalAmount.toFixed(2)}
-                    {expense.currency && expense.currency !== 'USD' && (
+                    {/* Only show conversion if expense currency is different from base OR if we want to show USD equivalent when base is not USD */}
+                    {expense.currency && expense.currency !== baseCurrency && (
                       <span style={{ marginLeft: '0.5rem', color: 'var(--text-primary)' }}>
-                        ≈ USD {convert(expense.totalAmount, expense.currency).toFixed(2)}
+                        ≈ {baseCurrency} {convert(expense.totalAmount, expense.currency).toFixed(2)}
                       </span>
                     )}
+                    {/* Optional: Always show USD if base isn't USD and expense isn't USD? Or just leave it simple. 
+                        Let's stick to showing conversion to Base Currency if expense is different. 
+                        If expense is same as base, we don't need approx. 
+                    */}
                   </div>
                 </div>
 
@@ -285,6 +329,14 @@ function App() {
         />
       )}
     </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

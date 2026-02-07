@@ -283,3 +283,10 @@ body::before {
   -webkit-text-fill-color: unset;
   color: var(--text-primary);
 }
+
+/* Responsive time stats grid */
+@media (min-width: 768px) {
+  .time-stats-grid {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
+}

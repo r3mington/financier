@@ -3,7 +3,7 @@ import type { Expense } from '../types';
 import { CATEGORIES, CURRENCY_NAMES } from '../types';
 import { useCurrency } from '../hooks/useCurrency';
 import { v4 as uuidv4 } from 'uuid';
-import { X, Trash2 } from 'lucide-react';
+import { X, Trash2, MapPin } from 'lucide-react';
 
 interface ExpenseFormProps {
     initialData?: Expense;
@@ -22,6 +22,9 @@ export function ExpenseForm({ initialData, onSave, onCancel, onDelete }: Expense
 
     const [currency, setCurrency] = useState(initialData?.currency || lastInputCurrency);
     const [paidBy, setPaidBy] = useState<'me' | 'other'>(initialData?.paidBy || 'me');
+    const [notes, setNotes] = useState(initialData?.notes || '');
+    const [location, setLocation] = useState(initialData?.location);
+    const [isLocating, setIsLocating] = useState(false);
 
     const isHalf = initialData && initialData.myShare === (initialData.totalAmount / 2);
 
@@ -32,6 +35,64 @@ export function ExpenseForm({ initialData, onSave, onCancel, onDelete }: Expense
     const [myShareAmount, setMyShareAmount] = useState(
         initialData ? (isHalf ? '' : initialData.myShare.toString()) : ''
     );
+
+    // Auto-fill my share when amount changes (if exact match)
+    useEffect(() => {
+        if (!initialData && shareType === 'exact') {
+            setMyShareAmount(amount);
+        }
+    }, [amount, shareType, initialData]);
+
+    // Get Location on Mount for new transactions
+    useEffect(() => {
+        if (!initialData && !location) {
+            handleGetLocation();
+        }
+    }, []);
+
+    const handleGetLocation = () => {
+        if (!navigator.geolocation) return;
+        setIsLocating(true);
+        navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+                const { latitude, longitude } = pos.coords;
+
+                let locationData: Expense['location'] = {
+                    lat: latitude,
+                    lng: longitude
+                };
+
+                try {
+                    // Reverse geocoding via OpenStreetMap (Nominatim)
+                    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+                    const data = await response.json();
+
+                    if (data && data.address) {
+                        const city = data.address.city || data.address.town || data.address.village || data.address.county;
+                        const country = data.address.country;
+                        const countryCode = data.address.country_code?.toUpperCase();
+
+                        locationData = {
+                            ...locationData,
+                            city,
+                            country,
+                            countryCode,
+                            address: data.display_name
+                        };
+                    }
+                } catch (error) {
+                    console.error("Reverse geocoding failed", error);
+                }
+
+                setLocation(locationData);
+                setIsLocating(false);
+            },
+            (err) => {
+                console.error("Loc error", err);
+                setIsLocating(false);
+            }
+        );
+    };
 
     useEffect(() => {
         if (!initialData) {
@@ -62,7 +123,9 @@ export function ExpenseForm({ initialData, onSave, onCancel, onDelete }: Expense
             totalAmount: total,
             paidBy,
             myShare: calculatedShare,
-            currency
+            currency,
+            notes,
+            location
         };
 
         onSave(newExpense);
@@ -146,14 +209,36 @@ export function ExpenseForm({ initialData, onSave, onCancel, onDelete }: Expense
                         <label style={{ display: 'block', fontSize: '0.7rem', marginBottom: '0.5rem', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
                             [DESCRIPTION]
                         </label>
-                        <input
-                            className="glass-input"
-                            placeholder="e.g., DINNER_WITH_TEAM"
-                            value={description}
-                            onChange={e => setDescription(e.target.value)}
-                            autoFocus={!initialData}
-                            required
-                        />
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <input
+                                className="glass-input"
+                                placeholder="e.g., DINNER_WITH_TEAM"
+                                value={description}
+                                onChange={e => setDescription(e.target.value)}
+                                autoFocus={!initialData}
+                                required
+                                style={{ flex: 1 }}
+                            />
+                            <button
+                                type="button"
+                                onClick={handleGetLocation}
+                                className="glass-button"
+                                style={{
+                                    padding: '0 0.75rem',
+                                    color: location ? 'var(--color-success)' : 'var(--text-muted)',
+                                    borderColor: location ? 'var(--color-success)' : 'var(--border-muted)'
+                                }}
+                                title={location ? `Lat: ${location.lat}, Lng: ${location.lng}` : "Get Location"}
+                            >
+                                <MapPin size={18} className={isLocating ? 'animate-pulse' : ''} />
+                            </button>
+                        </div>
+                        {location && (
+                            <div style={{ marginTop: '0.25rem', fontSize: '0.65rem', color: 'var(--color-success)', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                <MapPin size={10} />
+                                {location.city ? `${location.city.toUpperCase()}, ${location.countryCode}` : `GPS: ${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`}
+                            </div>
+                        )}
                     </div>
 
                     {/* Amount + Currency */}
@@ -353,6 +438,21 @@ export function ExpenseForm({ initialData, onSave, onCancel, onDelete }: Expense
                                 : `PAYABLE: ${currency} ${shareType === 'half' ? (parseFloat(amount || '0') / 2).toFixed(2) : parseFloat(myShareAmount || '0').toFixed(2)}`
                             }
                         </div>
+                    </div>
+
+                    {/* Notes */}
+                    <div>
+                        <label style={{ display: 'block', fontSize: '0.7rem', marginBottom: '0.5rem', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
+                            [NOTES]
+                        </label>
+                        <textarea
+                            className="glass-input"
+                            value={notes}
+                            onChange={e => setNotes(e.target.value)}
+                            rows={2}
+                            placeholder="// ADD_DETAILS..."
+                            style={{ resize: 'none' }}
+                        />
                     </div>
 
                     <button type="submit" className="glass-button" style={{
