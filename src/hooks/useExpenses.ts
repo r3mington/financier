@@ -1,16 +1,15 @@
-import { useState, useEffect, useMemo } from 'react';
-import type { Expense, ExpenseSummary } from '../types';
+import { useState, useEffect } from 'react';
+import type { Expense } from '../types';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthProvider';
-import { useCurrency } from './useCurrency';
 
-const STORAGE_KEY = 'financier_expenses_v1';
+
+
 
 export function useExpenses() {
     const { user } = useAuth();
     const [expenses, setExpenses] = useState<Expense[]>([]);
     const [loading, setLoading] = useState(true);
-    const { convert, baseCurrency } = useCurrency();
 
     // Fetch from Supabase
     useEffect(() => {
@@ -33,6 +32,7 @@ export function useExpenses() {
                 const mappedExpenses: Expense[] = (data || []).map((item: any) => ({
                     id: item.id,
                     date: item.date,
+                    endDate: item.end_date,
                     description: item.description,
                     category: item.category,
                     totalAmount: item.total_amount,
@@ -43,47 +43,14 @@ export function useExpenses() {
                     location: item.location
                 }));
                 setExpenses(mappedExpenses);
-
-                // Check for local migration
-                const localData = localStorage.getItem(STORAGE_KEY);
-                if (localData) {
-                    try {
-                        const parsed: Expense[] = JSON.parse(localData);
-                        if (parsed.length > 0) {
-                            console.log('Migrating local data to Supabase...');
-                            const rowsToInsert = parsed.map(e => ({
-                                user_id: user.id,
-                                date: e.date,
-                                description: e.description,
-                                category: e.category,
-                                total_amount: e.totalAmount,
-                                paid_by: e.paidBy,
-                                my_share: e.myShare,
-                                currency: e.currency,
-                                notes: e.notes,
-                                location: e.location
-                            }));
-
-                            const { error: insertError } = await supabase.from('expenses').insert(rowsToInsert);
-                            if (!insertError) {
-                                console.log('Migration successful. Clearing local storage.');
-                                localStorage.removeItem(STORAGE_KEY);
-                                // Refresh
-                                fetchExpenses();
-                                return;
-                            } else {
-                                console.error('Migration failed:', insertError);
-                            }
-                        }
-                    } catch (e) {
-                        console.error('Error parsing local data for migration', e);
-                    }
-                }
             }
             setLoading(false);
         };
 
         fetchExpenses();
+
+        // One-time cleanup of old local storage data
+        localStorage.removeItem('financier_expenses_v1');
     }, [user]);
 
     const addExpense = async (expense: Expense) => {
@@ -97,6 +64,7 @@ export function useExpenses() {
         const row = {
             user_id: user.id,
             date: expense.date,
+            end_date: expense.endDate,
             description: expense.description,
             category: expense.category,
             total_amount: expense.totalAmount,
@@ -134,6 +102,7 @@ export function useExpenses() {
 
         const row = {
             date: updatedExpense.date,
+            end_date: updatedExpense.endDate,
             description: updatedExpense.description,
             category: updatedExpense.category,
             total_amount: updatedExpense.totalAmount,
@@ -151,74 +120,16 @@ export function useExpenses() {
         }
     };
 
-    const summary: ExpenseSummary = useMemo(() => {
-        return expenses.reduce((acc, curr) => {
-            const currency = curr.currency || baseCurrency;
-            const myShareConverted = convert(curr.myShare, currency);
-            const totalConverted = convert(curr.totalAmount, currency);
 
-            acc.totalSpent += myShareConverted;
-
-            if (curr.paidBy === 'me') {
-                const owedAmount = totalConverted - myShareConverted;
-                if (owedAmount > 0) {
-                    acc.totalOwedToMe += owedAmount;
-                }
-            } else {
-                acc.totalIOwe += myShareConverted;
-            }
-
-            return acc;
-        }, {
-            totalSpent: 0,
-            totalOwedToMe: 0,
-            totalIOwe: 0,
-            netBalance: 0
-        } as ExpenseSummary);
-    }, [expenses, baseCurrency, convert]);
-
-    if (summary) {
-        summary.netBalance = summary.totalOwedToMe - summary.totalIOwe;
-    }
 
     // Time Period Statistics
-    const now = new Date();
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
-    const lastQuarterStart = new Date(now.getFullYear(), now.getMonth() - 3, 1);
-    const lastQuarterEnd = new Date(now.getFullYear(), now.getMonth(), 0);
 
-    const calculatePeriodSpend = (startDate: Date, endDate?: Date) => {
-        return expenses.reduce((total, exp) => {
-            const expDate = new Date(exp.date);
-            const isInRange = endDate
-                ? expDate >= startDate && expDate <= endDate
-                : expDate >= startDate;
-
-            if (isInRange) {
-                const currency = exp.currency || baseCurrency;
-                return total + convert(exp.myShare, currency);
-            }
-            return total;
-        }, 0);
-    };
-
-    const rolling7Days = calculatePeriodSpend(sevenDaysAgo);
-    const lastMonth = calculatePeriodSpend(lastMonthStart, lastMonthEnd);
-    const lastQuarter = calculatePeriodSpend(lastQuarterStart, lastQuarterEnd);
 
     return {
         expenses,
         addExpense,
         updateExpense,
         deleteExpense,
-        summary,
-        loading,
-        timePeriods: {
-            rolling7Days,
-            lastMonth,
-            lastQuarter
-        }
+        loading
     };
 }

@@ -15,6 +15,9 @@ export interface Expense {
   // Optional notes
   notes?: string;
 
+  // Optional end date for period-based expenses
+  endDate?: string;
+
   // Location
   location?: {
     lat: number;
@@ -74,12 +77,7 @@ export const CURRENCY_NAMES: Record<string, string> = {
 };
 
 
-export type ExpenseSummary = {
-  totalSpent: number;      // Actual consumption (sum of myShare)
-  totalOwedToMe: number;   // (paidBy=me) - myShare
-  totalIOwe: number;       // (paidBy=other) && myShare
-  netBalance: number;      // totalOwedToMe - totalIOwe
-}
+
 
 export const CATEGORIES = [
   'Food & Dining',

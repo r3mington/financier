@@ -4,33 +4,40 @@ import { CURRENCY_NAMES } from './types';
 import { useExpenses } from './hooks/useExpenses';
 import { useCurrency } from './hooks/useCurrency';
 import { ExpenseForm } from './components/ExpenseForm';
-import { AsciiBarChart } from './components/AsciiBarChart';
-import { TimePeriodStats } from './components/TimePeriodStats';
 import { format } from 'date-fns';
-import { Edit2, Trash2, Terminal, Download, LogOut } from 'lucide-react';
+import { Edit2, Trash2, Terminal, Download, LogOut, Settings } from 'lucide-react';
 import { exportToCSV } from './utils/exportCSV';
 import { AuthProvider, useAuth } from './context/AuthProvider';
 import { AuthForm } from './components/AuthForm';
+import { SettingsModal } from './components/SettingsModal';
+import { useReporting } from './hooks/useReporting';
+import { StatsOverview } from './components/StatsOverview';
+import { TrendChart } from './components/TrendChart';
 
 function AppContent() {
   const { user, loading, signOut } = useAuth();
-  const { expenses, addExpense, deleteExpense, updateExpense, summary } = useExpenses();
-  const { supportedCurrencies, baseCurrency, setBaseCurrency, convert } = useCurrency();
+  const { expenses, addExpense, deleteExpense, updateExpense } = useExpenses();
+  const { supportedCurrencies, baseCurrency, setBaseCurrency } = useCurrency();
+
+  const [period, setPeriod] = useState(30);
+  const { todaySpend, totalEverSpend, trendData } = useReporting(expenses, period);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | undefined>(undefined);
 
   if (loading) {
     return (
       <div style={{
-        height: '100vh',
         display: 'flex',
-        alignItems: 'center',
         justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        background: 'var(--bg-primary)',
         color: 'var(--text-primary)',
         fontFamily: 'JetBrains Mono'
       }}>
-        [INITIALIZING_SYSTEM...]
+        [INITIALIZING SYSTEM...]
       </div>
     );
   }
@@ -50,11 +57,25 @@ function AppContent() {
   };
 
   return (
-    <div className="container" style={{ paddingBottom: '80px' }}>
-      {/* Terminal Header */}
-      <header style={{ marginBottom: 'var(--spacing-lg)', borderBottom: '2px solid var(--border-muted)', paddingBottom: '1rem' }}>
-        <div className="flex-between" style={{ marginBottom: '0.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+    <div style={{
+      maxWidth: '600px',
+      margin: '0 auto',
+      padding: '1rem',
+      fontFamily: 'Inter, sans-serif',
+      color: 'var(--text-primary)',
+      minHeight: '100vh'
+    }}>
+      {/* Header */}
+      <header style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '2rem',
+        paddingBottom: '1rem',
+        borderBottom: '2px solid var(--border-primary)'
+      }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
             <Terminal size={24} color="var(--text-primary)" />
             <h1 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--text-primary)', fontWeight: 700 }}>
               FINANCIER.EXE
@@ -79,6 +100,15 @@ function AppContent() {
             </div>
 
             <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="glass-button"
+              style={{ padding: '0.4rem', border: '1px solid var(--border-muted)', marginRight: '0.5rem' }}
+              title="Settings"
+            >
+              <Settings size={14} />
+            </button>
+
+            <button
               onClick={signOut}
               className="glass-button"
               style={{ padding: '0.4rem', border: '1px solid var(--border-muted)' }}
@@ -93,37 +123,22 @@ function AppContent() {
         </div>
       </header>
 
-      {/* Summary Section */}
-      <section style={{ display: 'grid', gap: '1rem', marginBottom: '2rem' }}>
-        {/* Main consumption */}
-        <div className="glass-panel" style={{ padding: '1.5rem' }}>
-          <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '0.75rem', letterSpacing: '0.1em' }}>
-            [TOTAL_CONSUMPTION]
-          </div>
-          <div
-            className="animate-pulseGlow"
-            style={{ fontSize: '2.5rem', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'JetBrains Mono' }}
-          >
-            {baseCurrency} {summary.totalSpent.toFixed(2)}
-          </div>
-        </div>
+      {/* Stats & Charts */}
+      <StatsOverview
+        todaySpend={todaySpend}
+        totalEverSpend={totalEverSpend}
+        baseCurrency={baseCurrency}
+      />
 
-        {/* Debts grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-          <div className="glass-panel" style={{ padding: '1rem', borderColor: 'var(--color-success)' }}>
-            <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', marginBottom: '0.5rem' }}>[RECEIVABLE]</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--color-success)' }}>
-              +{summary.totalOwedToMe.toFixed(2)}
-            </div>
-          </div>
-          <div className="glass-panel" style={{ padding: '1rem', borderColor: 'var(--color-danger)' }}>
-            <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', marginBottom: '0.5rem' }}>[PAYABLE]</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--color-danger)' }}>
-              -{summary.totalIOwe.toFixed(2)}
-            </div>
-          </div>
-        </div>
-      </section>
+      <div style={{ marginBottom: '2rem' }}>
+        <TrendChart
+          data={trendData}
+          period={period}
+          setPeriod={setPeriod}
+          baseCurrency={baseCurrency}
+        />
+      </div>
+
 
       {/* Add button - moved to top for mobile UX */}
       <button
@@ -142,11 +157,6 @@ function AppContent() {
         [+] NEW_TRANSACTION
       </button>
 
-      {/* Time Period Stats */}
-      <TimePeriodStats />
-
-      {/* ASCII Chart */}
-      <AsciiBarChart />
 
       {/* Transaction Log */}
       <div className="glass-panel" style={{ overflow: 'hidden' }}>
@@ -196,112 +206,99 @@ function AppContent() {
                 style={{
                   padding: '1rem',
                   borderBottom: idx < expenses.length - 1 ? '1px solid var(--border-muted)' : 'none',
-                  transition: 'background 0.15s',
-                  display: 'grid',
-                  gridTemplateColumns: '1fr auto',
-                  gap: '1rem',
-                  alignItems: 'center',
-                  animation: `fadeInUp 0.3s ease-out ${idx * 0.05}s forwards`,
-                  opacity: 0
+                  background: idx % 2 === 0 ? 'transparent' : 'var(--bg-secondary)',
+                  transition: 'background 0.2s'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-tertiary)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                className="expense-row"
               >
-                <div style={{ cursor: 'pointer' }} onClick={() => handleEdit(expense)}>
-                  <div style={{
-                    fontWeight: 600,
-                    fontSize: '0.95rem',
-                    color: 'var(--text-white)',
-                    marginBottom: '0.25rem'
-                  }}>
-                    {expense.description}
-                  </div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-                    {format(new Date(expense.date), 'yyyy-MM-dd')} | {expense.category} | {expense.paidBy === 'me' ? 'PAID_BY_USER' : 'PAID_BY_OTHER'}
-                    {expense.location && (
-                      <span style={{ color: 'var(--text-primary)', marginLeft: '0.5rem' }}>
-                        | {expense.location.city ? `${expense.location.city.toUpperCase()}, ${expense.location.countryCode}` : `GPS: ${expense.location.lat.toFixed(4)}, ${expense.location.lng.toFixed(4)}`}
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                    TOTAL: {expense.currency || baseCurrency} {expense.totalAmount.toFixed(2)}
-                    {/* Only show conversion if expense currency is different from base OR if we want to show USD equivalent when base is not USD */}
-                    {expense.currency && expense.currency !== baseCurrency && (
-                      <span style={{ marginLeft: '0.5rem', color: 'var(--text-primary)' }}>
-                        ≈ {baseCurrency} {convert(expense.totalAmount, expense.currency).toFixed(2)}
-                      </span>
-                    )}
-                    {/* Optional: Always show USD if base isn't USD and expense isn't USD? Or just leave it simple. 
-                        Let's stick to showing conversion to Base Currency if expense is different. 
-                        If expense is same as base, we don't need approx. 
-                    */}
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <div style={{ textAlign: 'right' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
                     <div style={{
                       fontWeight: 700,
-                      fontSize: '1.1rem',
+                      marginBottom: '0.25rem',
                       color: 'var(--text-primary)',
-                      fontFamily: 'JetBrains Mono'
+                      fontSize: '0.95rem',
+                      letterSpacing: '0.02em'
                     }}>
-                      -{expense.myShare.toFixed(2)}
+                      {expense.description}
                     </div>
-                    <div style={{ fontSize: '0.65rem', marginTop: '0.25rem', color: expense.paidBy === 'me' ? 'var(--color-success)' : 'var(--color-danger)' }}>
-                      {expense.paidBy === 'me' && expense.totalAmount > expense.myShare
-                        ? `+${(expense.totalAmount - expense.myShare).toFixed(2)} RECV`
-                        : expense.paidBy === 'other'
-                          ? `DEBT`
-                          : 'FULL'}
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                      {format(new Date(expense.date), 'yyyy-MM-dd')}{expense.endDate && expense.endDate !== expense.date && ` -> ${format(new Date(expense.endDate), 'yyyy-MM-dd')}`} | {expense.category} | {expense.paidBy === 'me' ? 'PAID_BY_USER' : 'PAID_BY_OTHER'}
+                      {expense.location && (
+                        <span style={{ color: 'var(--text-primary)', marginLeft: '0.5rem' }}>
+                          | {expense.location.city ? `${expense.location.city.toUpperCase()}, ${expense.location.countryCode}` : `GPS: ${expense.location.lat.toFixed(4)}, ${expense.location.lng.toFixed(4)}`}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'monospace', marginTop: '0.2rem' }}>
+                      TOTAL: {expense.currency} {expense.totalAmount.toFixed(2)}
                     </div>
                   </div>
 
-                  {/* Action icons */}
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button
-                      onClick={() => handleEdit(expense)}
-                      style={{
-                        background: 'none',
-                        border: '1px solid var(--border-muted)',
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{
+                        fontWeight: 700,
+                        fontSize: '1.1rem',
                         color: 'var(--text-primary)',
-                        cursor: 'pointer',
-                        padding: '0.4rem',
-                        transition: 'all 0.15s'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = 'var(--text-primary)';
-                        e.currentTarget.style.background = 'var(--bg-tertiary)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = 'var(--border-muted)';
-                        e.currentTarget.style.background = 'none';
-                      }}
-                    >
-                      <Edit2 size={14} />
-                    </button>
-                    <button
-                      onClick={() => { if (confirm('DELETE TRANSACTION?')) deleteExpense(expense.id); }}
-                      style={{
-                        background: 'none',
-                        border: '1px solid var(--border-muted)',
-                        color: 'var(--color-danger)',
-                        cursor: 'pointer',
-                        padding: '0.4rem',
-                        transition: 'all 0.15s'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = 'var(--color-danger)';
-                        e.currentTarget.style.background = 'var(--bg-tertiary)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = 'var(--border-muted)';
-                        e.currentTarget.style.background = 'none';
-                      }}
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                        fontFamily: 'JetBrains Mono'
+                      }}>
+                        -{expense.myShare.toFixed(2)}
+                      </div>
+                      <div style={{ fontSize: '0.65rem', marginTop: '0.25rem', color: expense.paidBy === 'me' ? 'var(--color-success)' : 'var(--color-danger)' }}>
+                        {expense.paidBy === 'me' && expense.totalAmount > expense.myShare
+                          ? `+${(expense.totalAmount - expense.myShare).toFixed(2)} RECV`
+                          : expense.paidBy === 'other'
+                            ? `DEBT`
+                            : 'FULL'}
+                      </div>
+                    </div>
+
+                    {/* Action icons */}
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        onClick={() => handleEdit(expense)}
+                        style={{
+                          background: 'none',
+                          border: '1px solid var(--border-muted)',
+                          color: 'var(--text-primary)',
+                          cursor: 'pointer',
+                          padding: '0.4rem',
+                          transition: 'all 0.15s'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = 'var(--text-primary)';
+                          e.currentTarget.style.background = 'var(--bg-tertiary)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = 'var(--border-muted)';
+                          e.currentTarget.style.background = 'none';
+                        }}
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button
+                        onClick={() => { if (confirm('DELETE TRANSACTION?')) deleteExpense(expense.id); }}
+                        style={{
+                          background: 'none',
+                          border: '1px solid var(--border-muted)',
+                          color: 'var(--color-danger)',
+                          cursor: 'pointer',
+                          padding: '0.4rem',
+                          transition: 'all 0.15s'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = 'var(--color-danger)';
+                          e.currentTarget.style.background = 'var(--bg-tertiary)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = 'var(--border-muted)';
+                          e.currentTarget.style.background = 'none';
+                        }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -310,25 +307,33 @@ function AppContent() {
         )}
       </div>
 
-      {isFormOpen && (
-        <ExpenseForm
-          initialData={editingExpense}
-          onSave={(e) => {
-            if (editingExpense) {
-              updateExpense(e.id, e);
-            } else {
-              addExpense(e);
-            }
-            handleCloseForm();
-          }}
-          onCancel={handleCloseForm}
-          onDelete={editingExpense ? (id) => {
-            deleteExpense(id);
-            handleCloseForm();
-          } : undefined}
-        />
-      )}
-    </div>
+      {
+        isFormOpen && (
+          <ExpenseForm
+            initialData={editingExpense}
+            onSave={(e) => {
+              if (editingExpense) {
+                updateExpense(e.id, e);
+              } else {
+                addExpense(e);
+              }
+              handleCloseForm();
+            }}
+            onCancel={handleCloseForm}
+            onDelete={editingExpense ? (id) => {
+              deleteExpense(id);
+              handleCloseForm();
+            } : undefined}
+          />
+        )
+      }
+
+      {
+        isSettingsOpen && (
+          <SettingsModal onClose={() => setIsSettingsOpen(false)} />
+        )
+      }
+    </div >
   );
 }
 

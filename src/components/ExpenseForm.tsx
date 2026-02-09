@@ -4,6 +4,7 @@ import { CATEGORIES, CURRENCY_NAMES } from '../types';
 import { useCurrency } from '../hooks/useCurrency';
 import { v4 as uuidv4 } from 'uuid';
 import { X, Trash2, MapPin } from 'lucide-react';
+import { DatePicker } from './DatePicker';
 
 interface ExpenseFormProps {
     initialData?: Expense;
@@ -18,7 +19,17 @@ export function ExpenseForm({ initialData, onSave, onCancel, onDelete }: Expense
     const [description, setDescription] = useState(initialData?.description || '');
     const [amount, setAmount] = useState(initialData?.totalAmount.toString() || '');
     const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
+    const [endDate, setEndDate] = useState(initialData?.endDate || '');
+    const [isMultiDay, setIsMultiDay] = useState(!!initialData?.endDate && initialData.endDate !== initialData.date);
+
     const [category, setCategory] = useState(initialData?.category || CATEGORIES[0]);
+
+    // Update endDate when multi-day is toggled off
+    useEffect(() => {
+        if (!isMultiDay) {
+            setEndDate('');
+        }
+    }, [isMultiDay]);
 
     const [currency, setCurrency] = useState(initialData?.currency || lastInputCurrency);
     const [paidBy, setPaidBy] = useState<'me' | 'other'>(initialData?.paidBy || 'me');
@@ -115,9 +126,16 @@ export function ExpenseForm({ initialData, onSave, onCancel, onDelete }: Expense
 
         if (isNaN(calculatedShare)) calculatedShare = total;
 
+        // Validation: End Date must be after Start Date
+        if (isMultiDay && endDate && endDate < date) {
+            alert('End date cannot be before start date');
+            return;
+        }
+
         const newExpense: Expense = {
             id: initialData?.id || uuidv4(),
             date,
+            endDate: isMultiDay ? endDate : undefined,
             description,
             category,
             totalAmount: total,
@@ -278,16 +296,42 @@ export function ExpenseForm({ initialData, onSave, onCancel, onDelete }: Expense
                     {/* Date + Category */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                         <div>
-                            <label style={{ display: 'block', fontSize: '0.7rem', marginBottom: '0.5rem', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
-                                [DATE]
+                            <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', marginBottom: '0.5rem', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
+                                <span>[DATE]</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsMultiDay(!isMultiDay)}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: isMultiDay ? 'var(--color-accent)' : 'var(--text-muted)',
+                                        cursor: 'pointer',
+                                        fontSize: '0.65rem',
+                                        textDecoration: 'underline'
+                                    }}
+                                >
+                                    {isMultiDay ? 'MULTI-DAY' : 'SINGLE'}
+                                </button>
                             </label>
-                            <input
-                                className="glass-input"
-                                type="date"
+                            <DatePicker
                                 value={date}
-                                onChange={e => setDate(e.target.value)}
-                                required
+                                onChange={setDate}
                             />
+                            {isMultiDay && (
+                                <div style={{ marginTop: '0.5rem' }}>
+                                    <label style={{ display: 'block', fontSize: '0.65rem', marginBottom: '0.25rem', color: 'var(--text-muted)' }}>
+                                        [ENDS_ON]
+                                    </label>
+                                    <DatePicker
+                                        value={endDate}
+                                        onChange={setEndDate}
+                                        minDate={date}
+                                    />
+                                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.25rem', fontStyle: 'italic' }}>
+                                        {endDate ? `${Math.max(1, Math.ceil((new Date(endDate).getTime() - new Date(date).getTime()) / (1000 * 60 * 60 * 24)) + 1)} days` : ''}
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div>
@@ -462,8 +506,8 @@ export function ExpenseForm({ initialData, onSave, onCancel, onDelete }: Expense
                         {initialData ? '[UPDATE]' : '[COMMIT]'}
                     </button>
 
-                </form>
-            </div>
-        </div>
+                </form >
+            </div >
+        </div >
     );
 }
