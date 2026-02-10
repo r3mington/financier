@@ -8,6 +8,11 @@ export type ChartDataPoint = {
     amount: number;     // Daily total in base currency
     fullDate: Date;     // Date object for sorting/filtering
     label: string;      // Display label (e.g. "Feb 09")
+    expenses?: {        // List of expenses for this day
+        id: string;
+        description: string;
+        amount: number;
+    }[];
 };
 
 export type CountryStat = {
@@ -30,6 +35,7 @@ export const useReporting = (expenses: Expense[], periodDays: number = 30) => {
     return useMemo(() => {
         const today = new Date();
         const dailyBuckets: Record<string, number> = {};
+        const dailyExpenses: Record<string, { id: string; description: string; amount: number }[]> = {};
         const countryBuckets: Record<string, number> = {};
         let totalEver = 0;
 
@@ -64,6 +70,14 @@ export const useReporting = (expenses: Expense[], periodDays: number = 30) => {
                 const dateKey = format(day, 'yyyy-MM-dd');
                 dailyBuckets[dateKey] = (dailyBuckets[dateKey] || 0) + dailyCost;
 
+                // Track individual expenses
+                if (!dailyExpenses[dateKey]) dailyExpenses[dateKey] = [];
+                dailyExpenses[dateKey].push({
+                    id: expense.id,
+                    description: expense.description,
+                    amount: dailyCost
+                });
+
                 // Track country spend if within selected period
                 if (isWithinInterval(day, { start: periodStart, end: periodEnd })) {
                     // Use country code or fallback to '??'
@@ -94,7 +108,8 @@ export const useReporting = (expenses: Expense[], periodDays: number = 30) => {
                 date: dateKey,
                 amount: Number(amount.toFixed(2)), // Round for chart display
                 fullDate: day,
-                label: format(day, 'MMM dd')
+                label: format(day, 'MMM dd'),
+                expenses: dailyExpenses[dateKey] || []
             });
         });
 
