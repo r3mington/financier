@@ -13,6 +13,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { useReporting } from './hooks/useReporting';
 import { StatsOverview } from './components/StatsOverview';
 import { TrendChart } from './components/TrendChart';
+import { CountryBreakdown } from './components/CountryBreakdown';
 
 function AppContent() {
   const { user, loading, signOut } = useAuth();
@@ -20,7 +21,7 @@ function AppContent() {
   const { supportedCurrencies, baseCurrency, setBaseCurrency } = useCurrency();
 
   const [period, setPeriod] = useState(30);
-  const { todaySpend, totalEverSpend, trendData } = useReporting(expenses, period);
+  const { todaySpend, totalEverSpend, trendData, countryStats } = useReporting(expenses, period);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -131,6 +132,10 @@ function AppContent() {
       />
 
       <div style={{ marginBottom: '2rem' }}>
+        <CountryBreakdown
+          data={countryStats}
+          baseCurrency={baseCurrency}
+        />
         <TrendChart
           data={trendData}
           period={period}

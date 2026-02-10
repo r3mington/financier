@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { Expense } from '../types';
-import { format, parseISO, eachDayOfInterval, subDays } from 'date-fns';
+import { format, parseISO, eachDayOfInterval, subDays, isWithinInterval } from 'date-fns';
 import { useCurrency } from './useCurrency';
 
 export type ChartDataPoint = {
@@ -10,11 +10,18 @@ export type ChartDataPoint = {
     label: string;      // Display label (e.g. "Feb 09")
 };
 
+export type CountryStat = {
+    code: string;
+    amount: number;
+    percentage: number;
+};
+
 export type ReportingStats = {
     todaySpend: number;
     totalEverSpend: number;
     trendData: ChartDataPoint[];
     averageDailySpend: number; // For the selected period
+    countryStats: CountryStat[];
 };
 
 export const useReporting = (expenses: Expense[], periodDays: number = 30) => {
@@ -23,7 +30,11 @@ export const useReporting = (expenses: Expense[], periodDays: number = 30) => {
     return useMemo(() => {
         const today = new Date();
         const dailyBuckets: Record<string, number> = {};
+        const countryBuckets: Record<string, number> = {};
         let totalEver = 0;
+
+        const periodStart = subDays(today, periodDays - 1);
+        const periodEnd = today;
 
         // 1. Bucket Algorithm: Distribute all expenses into daily buckets
         expenses.forEach(expense => {
@@ -52,6 +63,14 @@ export const useReporting = (expenses: Expense[], periodDays: number = 30) => {
             interval.forEach(day => {
                 const dateKey = format(day, 'yyyy-MM-dd');
                 dailyBuckets[dateKey] = (dailyBuckets[dateKey] || 0) + dailyCost;
+
+                // Track country spend if within selected period
+                if (isWithinInterval(day, { start: periodStart, end: periodEnd })) {
+                    // Use country code or fallback to '??'
+                    // Access location safely since it's optional
+                    const countryCode = expense.location?.countryCode || '??';
+                    countryBuckets[countryCode] = (countryBuckets[countryCode] || 0) + dailyCost;
+                }
             });
         });
 
@@ -79,13 +98,24 @@ export const useReporting = (expenses: Expense[], periodDays: number = 30) => {
             });
         });
 
-        // 3. Stats
+        // 3. Process Country Stats
+        const countryStats: CountryStat[] = Object.entries(countryBuckets)
+            .map(([code, amount]) => ({
+                code,
+                amount,
+                percentage: periodTotal > 0 ? (amount / periodTotal) * 100 : 0
+            }))
+            .sort((a, b) => b.amount - a.amount)
+            .slice(0, 5); // Top 5
+
+        // 4. Stats
         const todayKey = format(today, 'yyyy-MM-dd');
         return {
             todaySpend: dailyBuckets[todayKey] || 0,
             totalEverSpend: totalEver,
             trendData,
-            averageDailySpend: periodTotal / periodDays
+            averageDailySpend: periodTotal / periodDays,
+            countryStats
         };
 
     }, [expenses, periodDays, baseCurrency, convert]);
