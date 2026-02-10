@@ -87,5 +87,6 @@ export const CATEGORIES = [
   'Groceries',
   'Bills & Utilities',
   'Travel',
+  'Wellness',
   'Other'
 ];
