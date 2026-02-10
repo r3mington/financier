@@ -105,6 +105,17 @@ export function ExpenseForm({ initialData, onSave, onCancel, onDelete }: Expense
         );
     };
 
+    const updateLocation = (field: string, value: string) => {
+        setLocation((prev) => ({
+            lat: 0,
+            lng: 0,
+            city: '',
+            countryCode: '',
+            ...(prev || {}),
+            [field]: value
+        }));
+    };
+
     useEffect(() => {
         if (!initialData) {
             updateLastInputCurrency(currency);
@@ -227,36 +238,57 @@ export function ExpenseForm({ initialData, onSave, onCancel, onDelete }: Expense
                         <label style={{ display: 'block', fontSize: '0.7rem', marginBottom: '0.5rem', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
                             [DESCRIPTION]
                         </label>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            <input
-                                className="glass-input"
-                                placeholder="e.g., DINNER_WITH_TEAM"
-                                value={description}
-                                onChange={e => setDescription(e.target.value)}
-                                autoFocus={!initialData}
-                                required
-                                style={{ flex: 1 }}
-                            />
+                        <input
+                            className="glass-input"
+                            placeholder="e.g., DINNER_WITH_TEAM"
+                            value={description}
+                            onChange={e => setDescription(e.target.value)}
+                            autoFocus={!initialData}
+                            required
+                            style={{ width: '100%' }}
+                        />
+                    </div>
+
+                    {/* Location */}
+                    <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                            <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
+                                [LOCATION]
+                            </label>
                             <button
                                 type="button"
                                 onClick={handleGetLocation}
-                                className="glass-button"
                                 style={{
-                                    padding: '0 0.75rem',
-                                    color: location ? 'var(--color-success)' : 'var(--text-muted)',
-                                    borderColor: location ? 'var(--color-success)' : 'var(--border-muted)'
+                                    background: 'none',
+                                    border: 'none',
+                                    color: isLocating ? 'var(--text-muted)' : 'var(--color-accent)',
+                                    cursor: 'pointer',
+                                    fontSize: '0.65rem',
+                                    textDecoration: 'underline',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.25rem'
                                 }}
-                                title={location ? `Lat: ${location.lat}, Lng: ${location.lng}` : "Get Location"}
                             >
-                                <MapPin size={18} className={isLocating ? 'animate-pulse' : ''} />
+                                <MapPin size={12} className={isLocating ? 'animate-spin' : ''} />
+                                {isLocating ? 'LOCATING...' : 'AUTO_DETECT'}
                             </button>
                         </div>
-                        {location && (
-                            <div style={{ marginTop: '0.25rem', fontSize: '0.65rem', color: 'var(--color-success)', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                <MapPin size={10} />
-                                {location.city ? `${location.city.toUpperCase()}, ${location.countryCode}` : `GPS: ${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`}
-                            </div>
-                        )}
+                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.5rem' }}>
+                            <input
+                                className="glass-input"
+                                placeholder="CITY (e.g. TOKYO)"
+                                value={location?.city || ''}
+                                onChange={(e) => updateLocation('city', e.target.value)}
+                            />
+                            <input
+                                className="glass-input"
+                                placeholder="CODE (e.g. JP)"
+                                value={location?.countryCode || ''}
+                                onChange={(e) => updateLocation('countryCode', e.target.value.toUpperCase().slice(0, 2))}
+                                maxLength={2}
+                            />
+                        </div>
                     </div>
 
                     {/* Amount + Currency */}
